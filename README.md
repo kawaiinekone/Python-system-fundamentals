@@ -423,4 +423,106 @@ Modern application architectures separate durable persistence from low-latency i
 - **RDBMS (PostgreSQL, MySQL, SQLite):**
   - Schema-driven, relational tables joined via primary and foreign keys.
   - Strong ACID guarantees (Atomicity, Consistency, Isolation, Durability).
--Key-Value Stores (Redis, Memcached, DynamoDB): Schema-less associative storage pairing arbitrary data payloads with a unique lookup key, optimized for O(1) operations and sub-millisecond retrieval.
+- **Key-Value Store (Redis, Memcached, RocksDB, AWS DynamoDB):**
+  - Schema-less storage: Retrieves arbitrarily structured data blobs via unique alphanumeric keys.
+  - O(1) average lookup, write, and deletion times.
+
+### 10.2 In-Memory Key-Value Caching Pattern (Python Example)
+```python
+import time
+
+class SimpleInMemoryKVStore:
+    def __init__(self):
+        self._store = {}
+        self._ttl_registry = {}
+
+    def set(self, key: str, value: any, ttl_seconds: float = None):
+        self._store[key] = value
+        if ttl_seconds:
+            self._ttl_registry[key] = time.time() + ttl_seconds
+
+    def get(self, key: str):
+        if key in self._ttl_registry and time.time() > self._ttl_registry[key]:
+            del self._store[key]
+            del self._ttl_registry[key]
+            return None
+        return self._store.get(key, None)
+
+# Example usage
+kv = SimpleInMemoryKVStore()
+kv.set("session_user_9921", {"username": "shubhi", "role": "admin"}, ttl_seconds=2)
+print("Immediate Read:", kv.get("session_user_9921"))
+time.sleep(2.1)
+print("Read after TTL expiry:", kv.get("session_user_9921"))  # Returns None
+```
+
+---
+
+## 11. Comparative Language Ecosystems: Picking the Right Tool
+
+Every programming language makes explicit trade-offs across safety, developer velocity, execution speed, and concurrency.
+
+| Language | Primary Superpower | Key Weakness | Typical Use Case |
+| :--- | :--- | :--- | :--- |
+| **Python** | **Extensive libraries & speed of prototyping** | Slower raw execution; CPU threading limited by GIL | Data science, machine learning, academic research, scripting |
+| **Rust** | **Memory safety without garbage collection** (Borrow checker) | Steep learning curve, slow compilation times | Systems engineering, browser engines, cryptography, secure high-load APIs |
+| **Go (Golang)**| **High-concurrency networking** (Goroutines & channels) | Less expressive type system, runtime GC overhead | Distributed microservices, cloud infrastructure (Docker, K8s) |
+| **C / C++** | **Direct bare-metal hardware access** & raw performance | Manual memory management, risk of buffer overflows | Game engines, operating system kernels, embedded firmware |
+| **Java** | **Enterprise tooling & robust cross-platform VM** | Verbose syntax, high memory footprint | Massive enterprise applications, big data pipelines (Hadoop, Kafka) |
+
+---
+
+## 12. Computer Systems Architecture: Introduction to RISC-V
+
+To master systems programming, software developers must understand how code translates down to hardware instructions.
+
+### 12.1 What is RISC-V?
+**RISC-V** (pronounced *"risk-five"*) is an **open standard Instruction Set Architecture (ISA)** established on the principles of **Reduced Instruction Set Computer (RISC)** design:
+- **Royalty-Free & Open:** Unlike proprietary architectures (ARM, Intel x86), RISC-V is completely open-source, eliminating licensing fees for researchers and chip fabricators.
+- **Modular Base + Extensions:** Has a clean base integer instruction set (`RV32I` for 32-bit or `RV64I` for 64-bit) that can be extended with modules like `M` (hardware multiplication/division), `A` (atomic memory operations), `F`/`D` (floating point), and `C` (compressed instructions).
+
+### 12.2 Architectural Comparison
+| Characteristic | RISC-V (Load-Store Architecture) | Complex Instruction Set (x86) |
+| :--- | :--- | :--- |
+| **Instruction Size** | Fixed uniform size (32-bit standard) | Variable size (1 to 15 bytes) |
+| **Memory Access** | **Strict Load-Store:** Only explicit `LW` (load word) / `SW` (store word) access memory | Instructions can execute arithmetic directly on RAM operands |
+| **Registers** | 32 general-purpose registers (`x0` through `x31`) | Fewer registers historically with specialized hardware roles |
+| **Zero Register** | `x0` is hardwired permanently to constant `0` | No dedicated hardwired zero register |
+
+### 12.3 RISC-V Assembly Sample
+Here is how a basic addition and memory store operation looks in RISC-V assembly:
+```assembly
+# RISC-V Assembly: Add two numbers and write to memory address
+# Assumptions: Base address stored in x10; values in x11 and x12
+
+ADD x13, x11, x12    # x13 = x11 + x12
+SW  x13, 0(x10)       # Store result from x13 into memory at [x10 + 0]
+```
+This simplicity enables pipelined processors to decode instructions deterministically in a single clock cycle.
+
+---
+
+## 13. Synthesis: Bridge to Object-Oriented Programming (OOP)
+
+All fundamental concepts covered in this guide converge directly into Object-Oriented Programming:
+
+1. **Encapsulation as Scope & State Protection:**
+   Class definitions bundle mutable and immutable attributes alongside the methods that operate on them, establishing strict boundaries through interfaces.
+2. **`self` as the Instance Reference:**
+   In Python class methods, `self` explicitly passes the heap address of the invoking instance into the execution stack frame.
+3. **Reference Semantics in OOP:**
+   Passing an object instance to a function or method passes its reference by value, allowing method calls to mutate state in-place.
+4. **Constructors (`__init__`) and Destructors (`__del__`):**
+   `__init__` initializes heap allocations, while `__del__` acts as a finalizer hook called prior to destruction by the garbage collector.
+
+---
+
+## Summary Cheat Sheet
+
+- **References:** Python variables are names pointing to heap objects, not memory boxes.
+- **Mutability:** Mutable objects (`list`, `dict`) change in-place; immutable objects (`int`, `str`, `tuple`) reallocate on modification.
+- **Memory Layout:** Stack stores function frames and local variable pointers; Heap stores actual object payloads.
+- **Scope:** Python searches `Local -> Enclosing -> Global -> Built-in` (LEGB).
+- **Garbage Collection:** Reference counting handles immediate deallocation; Generational GC catches circular references.
+- **Concurrency & Locks:** Threads share memory; Mutexes prevent race conditions. Processes isolate memory and bypass the GIL.
+- **Systems & Hardware:** Databases scale horizontally/vertically; Key-Value stores optimize for O(1) latency; RISC-V bridges high-level code to hardware with clean load-store mechanics.
