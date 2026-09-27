@@ -52,3 +52,56 @@ print(f"Identity equality: {a is b}")  # True
 
 b.append(40)
 print(f"Value of a after mutating b: {a}")  # [10, 20, 30, 40]
+2.2 Immutable Data Types
+An object is immutable if its internal state cannot be modified after instantiation.
+Built-in types: int, float, bool, str, tuple, frozenset, bytes.
+Any modification operation allocates an entirely new object on the heap and rebinds the pointer.
+num = 500
+initial_id = id(num)
+num += 1
+
+print(f"Same object? {id(num) == initial_id}")  # False (New PyObject created)
+Optimization: Integer Interning
+CPython optimizes small scalar allocations by pre-allocating an internal global array for integers between -5 and 256. Variables assigned values in this range bind to the same singleton objects.
+2.3 Mutable Data Types
+An object is mutable if its internal data buffer can be updated in-place without altering its memory identity (id()).
+Built-in types: list, dict, set, bytearray, custom class instances.
+items = ["first", "second"]
+addr = id(items)
+items[0] = "updated"
+
+print(f"Address preserved: {id(items) == addr}")  # True
+2.4 Pitfall: Mutable Default Arguments
+Default argument expressions are evaluated once at function definition time, not at each call. Passing mutable types as default arguments causes state to persist across calls.
+# ANTI-PATTERN:
+def register_user(username, registry=[]):
+    registry.append(username)
+    return registry
+
+# CORRECT IDIOMATIC PATTERN:
+def register_user_safe(username, registry=None):
+    if registry is None:
+        registry = []
+    registry.append(username)
+    return registry
+3. Memory Layout: The Stack, The Heap, and Value Storage
++-------------------------------------------------------------+
+|                      Virtual Memory Space                   |
++-------------------------------------------------------------+
+|  STACK MEMORY                                               |
+|  - Function Call Frames (Activation Records)                |
+|  - Frame pointers, return program counters                  |
+|  - Local variable references (pointers to Heap)             |
+|  - Strict LIFO allocation / automatic deallocation         |
++-------------------------------------------------------------+
+|                            | (Grows downwards)              |
+|                            v                                |
+|                            ^                                |
+|                            | (Grows upwards)                |
++-------------------------------------------------------------+
+|  HEAP MEMORY                                                |
+|  - Dynamic allocations (`PyObject`, dictionaries, lists)    |
+|  - Managed via Python Memory Manager (pymalloc + system)    |
+|  - Object headers, reference counts, type descriptors       |
+|  - Monitored by the Garbage Collector                      |
++-------------------------------------------------------------
